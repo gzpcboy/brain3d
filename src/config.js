@@ -6,6 +6,7 @@ export const TOUCH_HOLD_DELAY_MS = 260;
 
 export const VIEWER_SETTINGS = Object.freeze({
   background: '#041018',
+  initialCameraZ: 285,
   minDistance: 140,
   maxDistance: 420,
   polarAngleMin: 0.25,

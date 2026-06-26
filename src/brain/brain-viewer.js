@@ -8,14 +8,16 @@ import {
   createCamera,
   createRenderer,
   createScene,
-  createTouchGlow,
+  createSurfaceGlow,
 } from './brain-scene.js';
+import { describeBrainSpot } from './neurotransmitter-map.js';
 import { TOUCH_HOLD_DELAY_MS, VIEWER_SETTINGS } from '../config.js';
 
 export class BrainViewer {
-  constructor({ canvas, container }) {
+  constructor({ canvas, container, onSpotSelect = null }) {
     this.canvas = canvas;
     this.container = container;
+    this.onSpotSelect = onSpotSelect;
     this.scene = createScene(VIEWER_SETTINGS.background);
     this.camera = createCamera(container);
     this.renderer = createRenderer(canvas);
@@ -24,7 +26,13 @@ export class BrainViewer {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.material = createBrainMaterial();
-    this.touchGlow = createTouchGlow();
+    this.touchGlow = createSurfaceGlow();
+    this.selectionGlow = createSurfaceGlow({
+      coreRadius: 6,
+      haloRadius: 14,
+      coreOpacity: 0.9,
+      haloOpacity: 0.3,
+    });
     this.startTime = performance.now();
     this.mesh = null;
     this.activeModelId = '';
@@ -34,9 +42,12 @@ export class BrainViewer {
     this.touchHoldPoint = null;
     this.touchAnchorPoint = null;
     this.touchIdentifier = null;
+    this.regionExtents = null;
+    this.ignoreClickUntil = 0;
 
     addLights(this.scene);
     this.scene.add(this.touchGlow);
+    this.scene.add(this.selectionGlow);
     this.configureControls();
     this.resize();
     this.handleResize = () => this.resize();
@@ -44,11 +55,13 @@ export class BrainViewer {
     this.handleTouchMove = (event) => this.onTouchMove(event);
     this.handleTouchEnd = (event) => this.onTouchEnd(event);
     this.handleTouchCancel = () => this.cancelTouchGlow();
+    this.handleCanvasClick = (event) => this.onCanvasClick(event);
     window.addEventListener('resize', this.handleResize);
     this.renderer.domElement.addEventListener('touchstart', this.handleTouchStart, { passive: true });
     this.renderer.domElement.addEventListener('touchmove', this.handleTouchMove, { passive: true });
     this.renderer.domElement.addEventListener('touchend', this.handleTouchEnd, { passive: true });
     this.renderer.domElement.addEventListener('touchcancel', this.handleTouchCancel, { passive: true });
+    this.renderer.domElement.addEventListener('click', this.handleCanvasClick);
   }
 
   configureControls() {
@@ -62,6 +75,7 @@ export class BrainViewer {
     this.controls.minPolarAngle = VIEWER_SETTINGS.polarAngleMin;
     this.controls.maxPolarAngle = VIEWER_SETTINGS.polarAngleMax;
     this.controls.target.set(0, 0, 0);
+    this.camera.position.z = VIEWER_SETTINGS.initialCameraZ;
     this.controls.update();
   }
 
@@ -74,6 +88,7 @@ export class BrainViewer {
     this.mesh.geometry.dispose();
     this.mesh = null;
     this.activeModelId = '';
+    this.regionExtents = null;
   }
 
   async loadModel(model, { onProgress } = {}) {
@@ -104,6 +119,7 @@ export class BrainViewer {
     this.scene.add(mesh);
     this.mesh = mesh;
     this.activeModelId = model.id;
+    this.regionExtents = size.clone().multiplyScalar(scale * 0.5);
     this.lastStats = this.buildStats(model, size, scale);
     onProgress?.(100);
   }
@@ -195,7 +211,20 @@ export class BrainViewer {
       return;
     }
 
+    if (this.touchHoldPoint && this.isTapGesture()) {
+      this.ignoreClickUntil = performance.now() + 700;
+      this.selectSpot(this.touchHoldPoint.x, this.touchHoldPoint.y);
+    }
+
     this.cancelTouchGlow();
+  }
+
+  onCanvasClick(event) {
+    if (performance.now() < this.ignoreClickUntil) {
+      return;
+    }
+
+    this.selectSpot(event.clientX, event.clientY);
   }
 
   findTrackedTouch(touchList) {
@@ -207,14 +236,17 @@ export class BrainViewer {
       return;
     }
 
-    this.positionTouchGlow(this.touchHoldPoint);
-  }
+    const hit = this.intersectPoint(this.touchHoldPoint.x, this.touchHoldPoint.y);
 
-  positionTouchGlow(point) {
-    if (!this.mesh) {
+    if (!hit) {
+      this.touchGlow.visible = false;
       return;
     }
 
+    this.positionTouchGlowFromHit(hit);
+  }
+
+  positionTouchGlow(point) {
     const hit = this.intersectPoint(point.x, point.y);
 
     if (!hit) {
@@ -222,10 +254,58 @@ export class BrainViewer {
       return;
     }
 
+    this.positionTouchGlowFromHit(hit);
+  }
+
+  positionTouchGlowFromHit(hit) {
+    this.positionGlowFromHit(this.touchGlow, hit);
+    this.touchGlow.visible = true;
+  }
+
+  positionGlowFromHit(glow, hit) {
+    if (!this.mesh) {
+      return;
+    }
+
     const normal = hit.face?.normal?.clone() || new THREE.Vector3(0, 0, 1);
     normal.transformDirection(hit.object.matrixWorld);
-    this.touchGlow.position.copy(hit.point).addScaledVector(normal, 3);
-    this.touchGlow.visible = true;
+    glow.position.copy(hit.point).addScaledVector(normal, 3);
+  }
+
+  isTapGesture() {
+    if (!this.touchAnchorPoint || !this.touchHoldPoint) {
+      return false;
+    }
+
+    const distance = Math.hypot(
+      this.touchHoldPoint.x - this.touchAnchorPoint.x,
+      this.touchHoldPoint.y - this.touchAnchorPoint.y,
+    );
+
+    return distance <= 12;
+  }
+
+  selectSpot(clientX, clientY) {
+    if (!this.mesh || !this.regionExtents) {
+      return;
+    }
+
+    const hit = this.intersectPoint(clientX, clientY);
+
+    if (!hit) {
+      return;
+    }
+
+    this.positionGlowFromHit(this.selectionGlow, hit);
+    this.selectionGlow.visible = true;
+    const localPoint = hit.object.worldToLocal(hit.point.clone());
+
+    this.onSpotSelect?.(describeBrainSpot(localPoint, this.regionExtents));
+  }
+
+  clearSelection() {
+    this.selectionGlow.visible = false;
+    this.touchGlow.visible = false;
   }
 
   intersectPoint(clientX, clientY) {
@@ -272,6 +352,13 @@ export class BrainViewer {
         this.touchGlow.children[0].material.opacity = 0.18 + (Math.sin(elapsed * 5.5) + 1) * 0.06;
       }
 
+      if (this.selectionGlow.visible) {
+        const pulse = 1 + Math.sin(elapsed * 3.8) * 0.08;
+
+        this.selectionGlow.scale.setScalar(pulse);
+        this.selectionGlow.children[0].material.opacity = 0.24 + (Math.sin(elapsed * 3.8) + 1) * 0.05;
+      }
+
       this.controls.update();
       this.renderer.render(this.scene, this.camera);
     };
@@ -286,12 +373,15 @@ export class BrainViewer {
     this.renderer.domElement.removeEventListener('touchmove', this.handleTouchMove);
     this.renderer.domElement.removeEventListener('touchend', this.handleTouchEnd);
     this.renderer.domElement.removeEventListener('touchcancel', this.handleTouchCancel);
+    this.renderer.domElement.removeEventListener('click', this.handleCanvasClick);
     this.cancelTouchGlow();
     this.controls.dispose();
     this.clearMesh();
-    this.touchGlow.children.forEach((child) => {
-      child.geometry.dispose();
-      child.material.dispose();
+    [this.touchGlow, this.selectionGlow].forEach((glow) => {
+      glow.children.forEach((child) => {
+        child.geometry.dispose();
+        child.material.dispose();
+      });
     });
     this.material.dispose();
     this.renderer.dispose();

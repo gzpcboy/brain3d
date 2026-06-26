@@ -19,14 +19,13 @@ export function createCamera(container) {
     0.1,
     2000,
   );
-  camera.position.set(0, 18, 230);
+  camera.position.set(0, 18, 285);
   return camera;
 }
 
 export function createScene(background) {
   const scene = new THREE.Scene();
   scene.background = null;
-  scene.fog = new THREE.Fog(background, 260, 430);
   return scene;
 }
 
@@ -56,23 +55,28 @@ export function createBrainMaterial() {
   });
 }
 
-export function createTouchGlow() {
+export function createSurfaceGlow({
+  coreRadius = 4,
+  haloRadius = 8,
+  coreOpacity = 0.95,
+  haloOpacity = 0.22,
+} = {}) {
   const group = new THREE.Group();
   const core = new THREE.Mesh(
-    new THREE.SphereGeometry(4, 20, 20),
+    new THREE.SphereGeometry(coreRadius, 20, 20),
     new THREE.MeshBasicMaterial({
       color: '#8df3d5',
       transparent: true,
-      opacity: 0.95,
+      opacity: coreOpacity,
       depthWrite: false,
     }),
   );
   const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(8, 20, 20),
+    new THREE.SphereGeometry(haloRadius, 20, 20),
     new THREE.MeshBasicMaterial({
       color: '#c8fff2',
       transparent: true,
-      opacity: 0.22,
+      opacity: haloOpacity,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),

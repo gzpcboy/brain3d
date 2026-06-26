@@ -107,6 +107,129 @@ body {
   color: var(--accent);
 }
 
+.selection-card {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  width: min(370px, calc(100% - 32px));
+  pointer-events: none;
+  transition: opacity 180ms ease, visibility 180ms ease, transform 180ms ease;
+}
+
+.selection-card.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+}
+
+.selection-card-body {
+  pointer-events: auto;
+  padding: 14px 16px;
+  border: 1px solid rgba(180, 255, 241, 0.12);
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(7, 21, 28, 0.22),
+    rgba(7, 21, 28, 0.12)
+  );
+  box-shadow: 0 14px 42px rgba(1, 8, 12, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.selection-kicker,
+.selection-title,
+.selection-summary,
+.selection-note,
+.selection-list {
+  margin-top: 0;
+}
+
+.selection-kicker {
+  margin: 0 32px 8px 0;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.selection-title {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.35);
+}
+
+.selection-summary,
+.selection-note {
+  color: rgba(237, 245, 242, 0.8);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.selection-summary {
+  margin-bottom: 12px;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.3);
+}
+
+.selection-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.selection-item {
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.selection-item strong,
+.selection-item span {
+  display: block;
+}
+
+.selection-item strong {
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.selection-item span {
+  color: rgba(237, 245, 242, 0.82);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.selection-note {
+  margin-bottom: 0;
+  font-size: 0.78rem;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.28);
+}
+
+.selection-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(7, 21, 28, 0.18);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.selection-dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .loading-overlay {
   position: absolute;
   inset: 0;
@@ -215,6 +338,16 @@ body {
   .source-attribution-copy {
     padding: 9px 12px;
     font-size: 0.78rem;
+  }
+
+  .selection-card {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .selection-card-body {
+    padding: 13px 14px;
   }
 
   .loading-overlay {
