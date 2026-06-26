@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createBrainModelDescriptor,
   loadBrainModelBundle,
+  withCacheKey,
 } from '../../src/brain/model-registry.js';
 
 describe('model registry', () => {
@@ -39,19 +40,23 @@ describe('model registry', () => {
       },
     ];
 
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => responses.shift(),
+    }));
+
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => responses.shift(),
-      })),
+      fetch,
     );
 
     const bundle = await loadBrainModelBundle(createBrainModelDescriptor());
 
+    expect(fetch).toHaveBeenNthCalledWith(1, withCacheKey('/data/brain-model.json'));
+    expect(fetch).toHaveBeenNthCalledWith(2, withCacheKey('/data/brain-source.json'));
     expect(bundle.model).toMatchObject({
       id: 'full',
-      meshPath: '/models/whole-brain-full.stl',
+      meshPath: withCacheKey('/models/whole-brain-full.stl'),
       reductionPercent: 0,
     });
     expect(bundle.source).toMatchObject({
@@ -94,6 +99,15 @@ describe('model registry', () => {
 
     await expect(loadBrainModelBundle(createBrainModelDescriptor())).rejects.toThrow(
       'Missing source attribution metadata',
+    );
+  });
+
+  it('adds a cache-busting version parameter to static asset paths', () => {
+    expect(withCacheKey('/data/brain-model.json', '2026-06-26T15:00:00.000Z')).toBe(
+      '/data/brain-model.json?v=2026-06-26T15%3A00%3A00.000Z',
+    );
+    expect(withCacheKey('/data/brain-model.json?raw=1', 'build-42')).toBe(
+      '/data/brain-model.json?raw=1&v=build-42',
     );
   });
 });

@@ -1,4 +1,10 @@
 import { MODEL_METADATA_PATH, SOURCE_METADATA_PATH } from '../config.js';
+import { BUILD_DATE } from '../version.js';
+
+export function withCacheKey(path, cacheKey = BUILD_DATE) {
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}v=${encodeURIComponent(cacheKey)}`;
+}
 
 export function createBrainModelDescriptor() {
   return {
@@ -11,7 +17,7 @@ export function createBrainModelDescriptor() {
 }
 
 export async function loadJson(path) {
-  const response = await fetch(path);
+  const response = await fetch(withCacheKey(path));
 
   if (!response.ok) {
     throw new Error(`Failed to load ${path}: ${response.status}`);
@@ -36,7 +42,10 @@ export async function loadBrainModelBundle(descriptor = createBrainModelDescript
 
   return {
     descriptor,
-    model: metadata.model,
+    model: {
+      ...metadata.model,
+      meshPath: withCacheKey(metadata.model.meshPath),
+    },
     source,
   };
 }
