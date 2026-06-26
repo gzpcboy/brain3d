@@ -1,0 +1,29 @@
+{
+  "name": "brain3d",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive 3D brain viewer powered by PittBrains3D source models",
+  "scripts": {
+    "dev": "npm run prepare:model && vite",
+    "build": "npm run prepare:model && vite build",
+    "preview": "npm run prepare:model && vite preview",
+    "prepare:model": "node ./scripts/prepare-model.mjs",
+    "serve:prod": "node ./scripts/serve-dist.mjs",
+    "serve:restart": "./scripts/restart-local-server.sh",
+    "test": "npm run test:unit && npm run test:structure",
+    "test:unit": "vitest run",
+    "test:structure": "node ./scripts/check-js-file-length.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "three": "^0.185.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "jsdom": "^27.2.0",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
+  }
+}
+

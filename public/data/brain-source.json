@@ -1,0 +1,11 @@
+{
+  "title": "PittBrains3D Whole Brain",
+  "authors": ["Erika Fanselow", "Gage Laporta"],
+  "organization": "PittBrains3D",
+  "sourceRepository": "https://github.com/PittBrains3D/PittBrains3D---Digital-3D-Models-for-Neuroanatomy-Instruction",
+  "sourceAsset": "https://raw.githubusercontent.com/PittBrains3D/PittBrains3D---Digital-3D-Models-for-Neuroanatomy-Instruction/main/Whole_brain_and_hemisected_brain/Whole%20brain.stl",
+  "sourceNotes": "The browser mesh is a reduced derivative of the PittBrains3D whole brain STL for interactive web viewing.",
+  "licenseName": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+}
+
