@@ -1,16 +1,12 @@
-import {
-  MODEL_METADATA_PATH,
-  MODEL_PATH,
-  SOURCE_METADATA_PATH,
-} from '../config.js';
+import { MODEL_METADATA_PATH, SOURCE_METADATA_PATH } from '../config.js';
 
 export function createBrainModelDescriptor() {
   return {
     id: 'whole-brain',
     label: 'Whole Brain',
-    meshPath: MODEL_PATH,
     metadataPath: MODEL_METADATA_PATH,
     sourcePath: SOURCE_METADATA_PATH,
+    meshMode: 'full',
   };
 }
 
@@ -30,10 +26,17 @@ export async function loadBrainModelBundle(descriptor = createBrainModelDescript
     loadJson(descriptor.sourcePath),
   ]);
 
+  if (!metadata.model) {
+    throw new Error(`Missing model metadata in ${descriptor.metadataPath}`);
+  }
+
+  if (!source.title || !source.sourceRepository || !source.licenseUrl || !source.licenseName) {
+    throw new Error(`Missing source attribution metadata in ${descriptor.sourcePath}`);
+  }
+
   return {
     descriptor,
-    metadata,
+    model: metadata.model,
     source,
   };
 }
-

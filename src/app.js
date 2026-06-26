@@ -3,7 +3,12 @@ import {
   createBrainModelDescriptor,
   loadBrainModelBundle,
 } from './brain/model-registry.js';
-import { renderAppShell, updateSource, updateStats, updateStatus } from './ui/shell.js';
+import {
+  hideLoadingOverlay,
+  renderAppShell,
+  setLoadingProgress,
+  updateSourceAttribution,
+} from './ui/shell.js';
 
 export async function mountApp(root) {
   const ui = renderAppShell(root);
@@ -12,14 +17,15 @@ export async function mountApp(root) {
   const viewer = new BrainViewer({
     canvas: ui.canvas,
     container: ui.viewerFrame,
-    onStatusChange: (value) => updateStatus(ui.statusLine, value),
-    onStatsChange: (stats) => updateStats(ui.modelStats, stats),
   });
 
-  updateSource(ui.sourceCopy, bundle.source);
-  await viewer.loadModel(descriptor.meshPath, bundle.metadata);
+  updateSourceAttribution(ui.sourceAttribution, bundle.source);
+  setLoadingProgress(ui, 0);
+  await viewer.loadModel(bundle.model, {
+    onProgress: (progressPercent) => setLoadingProgress(ui, progressPercent),
+  });
+  hideLoadingOverlay(ui);
   viewer.start();
 
   return viewer;
 }
-

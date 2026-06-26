@@ -6,9 +6,9 @@ const sourceUrl =
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const cacheDir = path.join(repoRoot, '.local');
 const sourcePath = path.join(cacheDir, 'whole-brain-source.stl');
-const outputPath = path.join(repoRoot, 'public', 'models', 'whole-brain-lite.stl');
+const outputDir = path.join(repoRoot, 'public', 'models');
 const metadataPath = path.join(repoRoot, 'public', 'data', 'brain-model.json');
-const stride = Number(process.env.BRAIN3D_REDUCTION_STRIDE || 12);
+const outputPath = path.join(outputDir, 'whole-brain-full.stl');
 
 function isBinaryStl(buffer) {
   if (buffer.length < 84) {
@@ -19,36 +19,17 @@ function isBinaryStl(buffer) {
   return 84 + triangleCount * 50 <= buffer.length;
 }
 
-function reduceBinaryStl(buffer, faceStride) {
+function readBinaryStlTriangleCount(buffer) {
   if (!isBinaryStl(buffer)) {
     throw new Error('The PittBrains3D source asset is not a binary STL.');
   }
 
-  const originalTriangleCount = buffer.readUInt32LE(80);
-  const keptTriangles = [];
-
-  for (let index = 0; index < originalTriangleCount; index += faceStride) {
-    const start = 84 + index * 50;
-    keptTriangles.push(buffer.subarray(start, start + 50));
-  }
-
-  const output = Buffer.allocUnsafe(84 + keptTriangles.length * 50);
-  buffer.copy(output, 0, 0, 80);
-  output.writeUInt32LE(keptTriangles.length, 80);
-
-  keptTriangles.forEach((triangle, index) => {
-    triangle.copy(output, 84 + index * 50);
-  });
-
-  return {
-    buffer: output,
-    originalTriangleCount,
-    reducedTriangleCount: keptTriangles.length,
-  };
+  return buffer.readUInt32LE(80);
 }
 
 async function ensureSourceFile() {
   await mkdir(cacheDir, { recursive: true });
+  await mkdir(outputDir, { recursive: true });
 
   try {
     await stat(sourcePath);
@@ -68,27 +49,29 @@ async function ensureSourceFile() {
 await ensureSourceFile();
 
 const sourceBuffer = await readFile(sourcePath);
-const reduced = reduceBinaryStl(sourceBuffer, stride);
-const reductionRatio = `${Math.round((1 - reduced.reducedTriangleCount / reduced.originalTriangleCount) * 100)}% smaller`;
+const triangleCount = readBinaryStlTriangleCount(sourceBuffer);
 
-await writeFile(outputPath, reduced.buffer);
+await writeFile(outputPath, sourceBuffer);
+
 await writeFile(
   metadataPath,
   JSON.stringify(
     {
       sourceUrl,
-      originalTriangleCount: reduced.originalTriangleCount,
-      reducedTriangleCount: reduced.reducedTriangleCount,
-      stride,
-      reductionRatio,
-      generatedAt: new Date().toISOString(),
+      model: {
+        id: 'full',
+        label: 'Full',
+        meshPath: '/models/whole-brain-full.stl',
+        originalTriangleCount: triangleCount,
+        reducedTriangleCount: triangleCount,
+        stride: 1,
+        reductionPercent: 0,
+        reductionRatio: 'Full resolution',
+      },
     },
     null,
     2,
   ),
 );
 
-console.log(
-  `Prepared reduced PittBrains3D model: ${reduced.originalTriangleCount} -> ${reduced.reducedTriangleCount} triangles.`,
-);
-
+console.log(`Prepared full PittBrains3D brain model: ${triangleCount} triangles.`);

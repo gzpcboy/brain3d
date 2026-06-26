@@ -5,9 +5,10 @@ Interactive 3D brain viewer built as a standalone site for `brain3d.gzpcboy.vip`
 ## Features
 
 - Uses PittBrains3D whole-brain source data with attribution
+- Uses the full whole-brain STL in the viewer
 - Orbit rotation and wheel/pinch zoom via Three.js
+- Progress overlay while the model loads, with touch-rest glow feedback on the mesh
 - Modular browser code with each JS file under 500 lines
-- Version badge in the UI to confirm deployments
 - Unit tests, Playwright e2e coverage, and a local `deploy.sh`
 
 ## Quick start
@@ -32,4 +33,3 @@ The browser mesh is derived from the PittBrains3D whole-brain STL:
 
 - Repository: <https://github.com/PittBrains3D/PittBrains3D---Digital-3D-Models-for-Neuroanatomy-Instruction>
 - License: CC BY-SA 4.0
-

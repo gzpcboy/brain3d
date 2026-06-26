@@ -1,102 +1,74 @@
-import { HERO_METRICS } from '../config.js';
-import { formatVersionLabel } from '../version.js';
-
 export function renderAppShell(root) {
   root.innerHTML = `
     <div class="page-shell">
       <div class="page-backdrop page-backdrop-a"></div>
       <div class="page-backdrop page-backdrop-b"></div>
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Interactive Neuroanatomy Viewer</p>
-          <h1>Brain3D</h1>
-        </div>
-        <div class="version-pill" data-testid="version-pill">${formatVersionLabel()}</div>
-      </header>
-
-      <main class="hero-grid">
-        <section class="hero-copy glass-panel">
-          <p class="kicker">Built from PittBrains3D source data</p>
-          <h2>Explore a tactile 3D brain with smooth orbit and zoom across desktop and touch.</h2>
-          <p class="hero-text">
-            This first release focuses on a fast, elegant whole-brain viewer. The module layout
-            is prepared for later additions like double-click, long-press, and region-specific
-            information overlays.
-          </p>
-          <div class="metric-row">
-            ${HERO_METRICS.map(
-              (metric) => `
-                <article class="metric-card">
-                  <span>${metric.label}</span>
-                  <strong>${metric.value}</strong>
-                </article>
-              `,
-            ).join('')}
-          </div>
-          <p class="status-line" data-testid="status-line">Booting viewer…</p>
-        </section>
-
-        <section class="viewer-panel glass-panel">
-          <div class="viewer-frame" data-testid="viewer-frame">
-            <canvas id="brain-canvas" aria-label="3D brain viewer"></canvas>
-            <div class="viewer-hud">
-              <div class="hud-chip">Drag to rotate</div>
-              <div class="hud-chip">Pinch or wheel to zoom</div>
+      <main class="viewer-frame" data-testid="viewer-frame">
+        <canvas id="brain-canvas" aria-label="3D brain viewer"></canvas>
+        <aside class="source-attribution" data-testid="source-attribution" aria-label="Source attribution">
+          <p class="source-attribution-copy" data-testid="source-attribution-copy"></p>
+        </aside>
+        <section class="loading-overlay" data-testid="loading-overlay" aria-live="polite">
+          <div class="loading-card">
+            <p class="loading-label" data-testid="loading-label">Loading full brain 0%</p>
+            <div class="progress-track" aria-hidden="true">
+              <div class="progress-bar" data-testid="loading-bar"></div>
             </div>
           </div>
         </section>
       </main>
-
-      <section class="info-grid">
-        <article class="glass-panel info-card">
-          <h3>Model Details</h3>
-          <dl class="info-list" data-testid="model-stats"></dl>
-        </article>
-        <article class="glass-panel info-card">
-          <h3>Source + License</h3>
-          <div class="source-copy" data-testid="source-copy"></div>
-        </article>
-      </section>
     </div>
   `;
 
   return {
     canvas: root.querySelector('#brain-canvas'),
     viewerFrame: root.querySelector('[data-testid="viewer-frame"]'),
-    statusLine: root.querySelector('[data-testid="status-line"]'),
-    modelStats: root.querySelector('[data-testid="model-stats"]'),
-    sourceCopy: root.querySelector('[data-testid="source-copy"]'),
+    sourceAttribution: root.querySelector('[data-testid="source-attribution-copy"]'),
+    loadingOverlay: root.querySelector('[data-testid="loading-overlay"]'),
+    loadingLabel: root.querySelector('[data-testid="loading-label"]'),
+    loadingBar: root.querySelector('[data-testid="loading-bar"]'),
   };
 }
 
-export function updateStatus(node, value) {
-  node.textContent = value;
+export function updateSourceAttribution(node, source) {
+  node.replaceChildren();
+
+  const prefix = document.createElement('span');
+  prefix.textContent = `${source.title} by ${source.authors.join(', ')} · `;
+
+  const repositoryLink = document.createElement('a');
+  repositoryLink.href = source.sourceRepository;
+  repositoryLink.target = '_blank';
+  repositoryLink.rel = 'noreferrer';
+  repositoryLink.textContent = 'Repository';
+
+  const separator = document.createElement('span');
+  separator.textContent = ' · ';
+  separator.setAttribute('aria-hidden', 'true');
+
+  const licenseLink = document.createElement('a');
+  licenseLink.href = source.licenseUrl;
+  licenseLink.target = '_blank';
+  licenseLink.rel = 'noreferrer';
+  licenseLink.textContent = source.licenseName;
+
+  node.append(prefix, repositoryLink, separator, licenseLink);
 }
 
-export function updateStats(node, stats) {
-  const entries = [
-    ['Original triangles', stats.originalTriangles?.toLocaleString() ?? 'Unknown'],
-    ['Reduced triangles', stats.reducedTriangles?.toLocaleString() ?? 'Unknown'],
-    ['Reduction', stats.reductionRatio ?? 'Unknown'],
-    ['Stride', stats.stride ? `1 of ${stats.stride}` : 'Unknown'],
-    ['Display size', `${stats.width} × ${stats.height} × ${stats.depth}`],
-  ];
+export function setLoadingProgress(ui, progressPercent) {
+  const hasValue = Number.isFinite(progressPercent);
+  const value = hasValue ? Math.max(0, Math.min(100, Math.round(progressPercent))) : null;
 
-  node.innerHTML = entries
-    .map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`)
-    .join('');
+  ui.loadingOverlay.classList.remove('is-hidden');
+  ui.loadingOverlay.removeAttribute('aria-hidden');
+  ui.loadingOverlay.dataset.loadingState = hasValue ? 'determinate' : 'indeterminate';
+  ui.loadingLabel.textContent = hasValue
+    ? `Loading full brain ${value}%`
+    : 'Loading full brain...';
+  ui.loadingBar.style.transform = `scaleX(${hasValue ? value / 100 : 0.35})`;
 }
 
-export function updateSource(node, source) {
-  node.innerHTML = `
-    <p>${source.title}</p>
-    <p>By ${source.authors.join(' and ')}</p>
-    <p>${source.sourceNotes}</p>
-    <p>
-      <a href="${source.sourceRepository}" target="_blank" rel="noreferrer">Repository</a>
-      <span aria-hidden="true"> · </span>
-      <a href="${source.licenseUrl}" target="_blank" rel="noreferrer">${source.licenseName}</a>
-    </p>
-  `;
+export function hideLoadingOverlay(ui) {
+  ui.loadingOverlay.classList.add('is-hidden');
+  ui.loadingOverlay.setAttribute('aria-hidden', 'true');
 }
-

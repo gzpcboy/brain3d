@@ -56,6 +56,34 @@ export function createBrainMaterial() {
   });
 }
 
+export function createTouchGlow() {
+  const group = new THREE.Group();
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(4, 20, 20),
+    new THREE.MeshBasicMaterial({
+      color: '#8df3d5',
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+    }),
+  );
+  const halo = new THREE.Mesh(
+    new THREE.SphereGeometry(8, 20, 20),
+    new THREE.MeshBasicMaterial({
+      color: '#c8fff2',
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+
+  group.visible = false;
+  group.renderOrder = 12;
+  group.add(halo, core);
+  return group;
+}
+
 export function centerAndScaleMesh(mesh) {
   const bounds = new THREE.Box3().setFromObject(mesh);
   const size = bounds.getSize(new THREE.Vector3());
@@ -68,4 +96,3 @@ export function centerAndScaleMesh(mesh) {
   mesh.scale.setScalar(scale);
   return { bounds, scale, size };
 }
-
